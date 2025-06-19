@@ -2,47 +2,45 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct Book {
-    int id;
+    char id[100];
     char title[100];
     char author[100];
-    int issuedTo; 
+    int issuedTo;
     struct Book* left;
     struct Book* right;
 } Book;
 
-Book* createBook(int id, char title[], char author[]) {
+Book* createBook(char id[], char title[], char author[]) {
     Book* newBook = (Book*)malloc(sizeof(Book));
-    newBook->id = id;
+    strcpy(newBook->id, id);
     strcpy(newBook->title, title);
     strcpy(newBook->author, author);
-    newBook->issuedTo = 0; 
+    newBook->issuedTo = 0;
     newBook->left = newBook->right = NULL;
     return newBook;
 }
 
-Book* insertBook(Book* root, int id, char title[], char author[]) {
+Book* insertBook(Book* root, char id[], char title[], char author[]) {
     if (root == NULL)
         return createBook(id, title, author);
-    if (id < root->id)
+    int cmp = strcmp(id, root->id);
+    if (cmp < 0)
         root->left = insertBook(root->left, id, title, author);
-    else if (id > root->id)
+    else if (cmp > 0)
         root->right = insertBook(root->right, id, title, author);
     else
-        printf("Book with ID %d already exists!\n", id);
+        printf("Book with ID %s already exists!\n", id);
     return root;
 }
 
-
-Book* searchBook(Book* root, int id) {
-    if (root == NULL || root->id == id)
+Book* searchBook(Book* root, char id[]) {
+    if (root == NULL || strcmp(root->id, id) == 0)
         return root;
-    if (id < root->id)
+    if (strcmp(id, root->id) < 0)
         return searchBook(root->left, id);
     return searchBook(root->right, id);
 }
-
 
 Book* minValueNode(Book* node) {
     Book* current = node;
@@ -51,13 +49,13 @@ Book* minValueNode(Book* node) {
     return current;
 }
 
-
-Book* deleteBook(Book* root, int id) {
+Book* deleteBook(Book* root, char id[]) {
     if (root == NULL)
         return root;
-    if (id < root->id)
+    int cmp = strcmp(id, root->id);
+    if (cmp < 0)
         root->left = deleteBook(root->left, id);
-    else if (id > root->id)
+    else if (cmp > 0)
         root->right = deleteBook(root->right, id);
     else {
         if (root->left == NULL) {
@@ -70,7 +68,7 @@ Book* deleteBook(Book* root, int id) {
             return temp;
         }
         Book* temp = minValueNode(root->right);
-        root->id = temp->id;
+        strcpy(root->id, temp->id);
         strcpy(root->title, temp->title);
         strcpy(root->author, temp->author);
         root->issuedTo = temp->issuedTo;
@@ -82,7 +80,7 @@ Book* deleteBook(Book* root, int id) {
 void displayBooks(Book* root) {
     if (root != NULL) {
         displayBooks(root->left);
-        printf("ID: %d, Title: %s, Author: %s, ", root->id, root->title, root->author);
+        printf("ID: %s, Title: %s, Author: %s, ", root->id, root->title, root->author);
         if (root->issuedTo)
             printf("Issued to Student ID: %d\n", root->issuedTo);
         else
@@ -91,33 +89,33 @@ void displayBooks(Book* root) {
     }
 }
 
-void issueBook(Book* root, int bookId, int studentId) {
-    Book* found = searchBook(root, bookId);
+void issueBook(Book* root, char id[], int studentId) {
+    Book* found = searchBook(root, id);
     if (found) {
         if (found->issuedTo == 0) {
             found->issuedTo = studentId;
-            printf("Book ID %d issued to Student ID %d.\n", bookId, studentId);
+            printf("Book ID %s issued to Student ID %d.\n", id, studentId);
         } else {
-            printf("Book ID %d is already issued to Student ID %d.\n", bookId, found->issuedTo);
+            printf("Book ID %s is already issued to Student ID %d.\n", id, found->issuedTo);
         }
     } else {
-        printf("Book ID %d not found.\n", bookId);
+        printf("Book ID %s not found.\n", id);
     }
 }
 
-void returnBook(Book* root, int bookId, int studentId) {
-    Book* found = searchBook(root, bookId);
+void returnBook(Book* root, char id[], int studentId) {
+    Book* found = searchBook(root, id);
     if (found) {
         if (found->issuedTo == studentId) {
             found->issuedTo = 0;
-            printf("Book ID %d returned by Student ID %d.\n", bookId, studentId);
+            printf("Book ID %s returned by Student ID %d.\n", id, studentId);
         } else if (found->issuedTo == 0) {
-            printf("Book ID %d is not issued to anyone.\n", bookId);
+            printf("Book ID %s is not issued to anyone.\n", id);
         } else {
-            printf("Book ID %d is not issued to Student ID %d (issued to Student ID %d).\n", bookId, studentId, found->issuedTo);
+            printf("Book ID %s is not issued to Student ID %d (issued to Student ID %d).\n", id, studentId, found->issuedTo);
         }
     } else {
-        printf("Book ID %d not found.\n", bookId);
+        printf("Book ID %s not found.\n", id);
     }
 }
 
@@ -131,36 +129,42 @@ void freeBST(Book* root) {
 
 int main() {
     Book* root = NULL;
-    int choice, id, studentId;
-    char title[100], author[100];
+    int choice, studentId;
+    char id[100], title[100], author[100], input[100];
 
     do {
         printf("\n--- Library Management System ---\n");
         printf("1. Add Book\n2. Search Book\n3. Display All Books\n4. Delete Book\n5. Issue Book\n6. Return Book\n7. Exit\n");
+
         printf("Enter your choice: ");
-        scanf("%d", &choice);
+        fgets(input, sizeof(input), stdin);
+        if (sscanf(input, "%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
 
         switch (choice) {
         case 1:
             printf("Enter Book ID: ");
-            scanf("%d", &id);
+            fgets(id, sizeof(id), stdin);
+            id[strcspn(id, "\n")] = 0;
             printf("Enter Title: ");
-            while(getchar() != '\n');
-            fgets(title, 100, stdin);
-            title[strcspn(title, "\n")] = 0; 
+            fgets(title, sizeof(title), stdin);
+            title[strcspn(title, "\n")] = 0;
             printf("Enter Author: ");
-            fgets(author, 100, stdin);
-            author[strcspn(author, "\n")] = 0; 
+            fgets(author, sizeof(author), stdin);
+            author[strcspn(author, "\n")] = 0;
             root = insertBook(root, id, title, author);
             printf("Book added successfully.\n");
             break;
         case 2:
             printf("Enter Book ID to search: ");
-            scanf("%d", &id);
+            fgets(id, sizeof(id), stdin);
+            id[strcspn(id, "\n")] = 0;
             {
                 Book* found = searchBook(root, id);
                 if (found) {
-                    printf("Book found: ID: %d, Title: %s, Author: %s, ", found->id, found->title, found->author);
+                    printf("Book found: ID: %s, Title: %s, Author: %s, ", found->id, found->title, found->author);
                     if (found->issuedTo)
                         printf("Issued to Student ID: %d\n", found->issuedTo);
                     else
@@ -176,22 +180,33 @@ int main() {
             break;
         case 4:
             printf("Enter Book ID to delete: ");
-            scanf("%d", &id);
+            fgets(id, sizeof(id), stdin);
+            id[strcspn(id, "\n")] = 0;
             root = deleteBook(root, id);
             printf("Book deleted (if existed).\n");
             break;
         case 5:
             printf("Enter Book ID to issue: ");
-            scanf("%d", &id);
+            fgets(id, sizeof(id), stdin);
+            id[strcspn(id, "\n")] = 0;
             printf("Enter Student ID: ");
-            scanf("%d", &studentId);
+            fgets(input, sizeof(input), stdin);
+            if (sscanf(input, "%d", &studentId) != 1) {
+                printf("Invalid Student ID.\n");
+                break;
+            }
             issueBook(root, id, studentId);
             break;
         case 6:
             printf("Enter Book ID to return: ");
-            scanf("%d", &id);
+            fgets(id, sizeof(id), stdin);
+            id[strcspn(id, "\n")] = 0;
             printf("Enter Student ID: ");
-            scanf("%d", &studentId);
+            fgets(input, sizeof(input), stdin);
+            if (sscanf(input, "%d", &studentId) != 1) {
+                printf("Invalid Student ID.\n");
+                break;
+            }
             returnBook(root, id, studentId);
             break;
         case 7:
